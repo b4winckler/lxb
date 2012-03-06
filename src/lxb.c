@@ -1,5 +1,7 @@
 #include <R.h>
 #include <Rinternals.h>
+#include <stdint.h>
+#include <string.h>
 #include <stdbool.h>
 #include "map_lib.h"
 
