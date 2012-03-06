@@ -1,0 +1,2 @@
+useDynLib(lxb, read_lxb)
+export(readLxb, readAndCombineLxbs)

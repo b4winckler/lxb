@@ -1,0 +1,54 @@
+\name{lxb-package}
+\alias{lxb-package}
+\alias{lxb}
+\docType{package}
+\title{Fast LXB file reader}
+\description{
+This package provides functions to quickly read LXB parameter data.  LXB is the
+format used by Luminex bead arrays and is based on the FCS v3.0 standard.
+}
+\details{
+\tabular{ll}{
+Package: \tab lxb\cr
+Version: \tab 0.0\cr
+Date: \tab 2012-03-06\cr
+Depends: \tab R (>= 2.8.0)\cr
+License: \tab BSD\cr
+Built: \tab R 2.14.1; universal-apple-darwin9.8.0; 2012-03-06 14:26:16 UTC; unix\cr
+}
+
+Index:
+\preformatted{
+readAndCombineLxbs      Read multiple LXB files
+readLxb                 Read single LXB file
+}
+
+Note that the functions in this package were written to run as fast as possible
+and with very specific LXB files in mind. It will not work with general files
+based on the FCS v3.0 standard and it must run on a little endian machine (e.g.
+Intel is ok, PowerPC is not). Adding support for more features of FCS v3.0 and
+other machines should be simple.
+
+Here are some assumptions made:
+\itemize{
+  \item The LXB file must be smaller than 100 Mb (\code{$BEGINDATA} and
+        \code{$ENDDATA} are ignored)
+  \item The data must be integral, in list mode, and in little endian byte
+        order (\code{$DATATYPE = I}, \code{$MODE = L},
+        \code{$BYTEORD = 1,2,3,4})
+  \item All parameters must be 32 bit (\code{$PnB = 32})
+  \item At most 99 parameters are supported
+  \item Unicode in the text segment is not supported
+  \item Keys or values containing the separator character are not supported
+}
+}
+\author{Björn Winckler <bjorn.winckler@gmail.com>}
+\keyword{package}
+\examples{
+## Typically your LXB files should be organized with one folder per plate,
+## with each plate consisting of multiple LXB files.  Assuming the folder
+## 'plate1' contains all LXB files for the first plate here is how to read
+## all parameter data for plate 1 into a matrix (each column of the matrix
+## corresponds to one parameter):
+y <- readAndCombineLxbs('plate1/*.lxb')
+}
