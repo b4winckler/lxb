@@ -1,9 +1,11 @@
 #include <R.h>
 #include <Rinternals.h>
 #include <stdint.h>
-#include <string.h>
 #include <stdbool.h>
 #include "map_lib.h"
+
+// strsep() does not exist on Windows, so include the version from libgw32c
+#include "strsep.h"
 
 // Max number of parameters in LXB file that we handle
 #define MAX_PAR       99
