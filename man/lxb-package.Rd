@@ -10,8 +10,8 @@ format used by Luminex bead arrays and is based on the FCS v3.0 standard.
 \details{
 \tabular{ll}{
 Package: \tab lxb\cr
-Version: \tab 0.0\cr
-Date: \tab 2012-03-06\cr
+Version: \tab 0.1\cr
+Date: \tab 2012-03-07\cr
 Depends: \tab R (>= 2.8.0)\cr
 License: \tab BSD\cr
 Built: \tab R 2.14.1; universal-apple-darwin9.8.0; 2012-03-06 14:26:16 UTC; unix\cr
