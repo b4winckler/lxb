@@ -14,8 +14,10 @@
     \code{\link{readManyLxbs}}
 }
 \examples{
+\dontrun{
 ## Read file 'name.lxb' from current directory into matrix x
 x <- readLxb('name.lxb')
+}
 }
 \keyword{file}
 

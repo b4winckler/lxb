@@ -21,7 +21,9 @@
     \code{\link{readLxb}}
 }
 \examples{
+\dontrun{
 ## Read all LXB files in current directory. 'x' will be a list of matrices.
 x <- readManyLxbs('*.lxb')
+}
 }
 \keyword{file}

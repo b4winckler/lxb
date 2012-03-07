@@ -30,6 +30,7 @@ Here are some assumptions made:
 \author{Björn Winckler <bjorn.winckler@gmail.com>}
 \keyword{package}
 \examples{
+\dontrun{
 ## Typically your LXB files should be organized with one folder per plate,
 ## with each plate consisting of multiple wells and each well corresponding to
 ## one LXB file.  Assuming the folder 'plate1' contains all LXB files for the
@@ -41,7 +42,13 @@ y <- readManyLxbs('plate1/*.lxb', filter=dropBadReads)
 ## The argument 'filter=dropBadReads' ensures that bad reads are ignored.
 
 ## It is now possible inspect individual wells, e.g. the dimensions of the
-## first well are given by dim(y[[1]]), and the names of the parameters for
-## well 1 are given by colnames(y[[1]]).  You can also inspect which LXB file
-## each item corresponds to by typing names(y).
+## first well are given by
+dim(y[[1]])
+
+## .. and the names of the parameters for well 1 are given by
+colnames(y[[1]])
+
+## You can also inspect which LXB file each item corresponds to by typing
+names(y)
+}
 }
