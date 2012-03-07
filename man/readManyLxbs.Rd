@@ -22,8 +22,15 @@
 }
 \examples{
 \dontrun{
-## Read all LXB files in current directory. 'x' will be a list of matrices.
+## Read all LXB files in current directory.
+## 'x' will be a list of matrices.
 x <- readManyLxbs('*.lxb')
+
+## See names of LXB files read
+names(x)
+
+## Store matrix for second LXB in variable 'y'
+y <- x[[2]]
 }
 }
 \keyword{file}
