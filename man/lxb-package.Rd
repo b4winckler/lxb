@@ -19,8 +19,8 @@ Built: \tab R 2.14.1; universal-apple-darwin9.8.0; 2012-03-06 14:26:16 UTC; unix
 
 Index:
 \preformatted{
-readAndCombineLxbs      Read multiple LXB files
-readLxb                 Read single LXB file
+readLxb           Read single LXB file
+readManyLxbs      Read multiple LXB files
 }
 
 Note that the functions in this package were written to run as fast as possible
@@ -46,9 +46,13 @@ Here are some assumptions made:
 \keyword{package}
 \examples{
 ## Typically your LXB files should be organized with one folder per plate,
-## with each plate consisting of multiple LXB files.  Assuming the folder
-## 'plate1' contains all LXB files for the first plate here is how to read
-## all parameter data for plate 1 into a matrix (each column of the matrix
-## corresponds to one parameter):
-y <- readAndCombineLxbs('plate1/*.lxb')
+## with each plate consisting of multiple wells and each well corresponding to
+## one LXB file.  Assuming the folder 'plate1' contains all LXB files for the
+## first plate here is how to read all parameter data for plate 1 into a list
+## of matrices (each list item is one well, each column in a matrix corresponds
+## to one parameter):
+y <- readManyLxbs('plate1/*.lxb')
+
+## It is now possible inspect individual wells, e.g. the dimensions of the
+## first well are given by: dim(y[[1]])
 }

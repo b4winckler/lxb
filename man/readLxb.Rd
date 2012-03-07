@@ -11,7 +11,7 @@
     \item{filename}{name of the file to load.}
 }
 \seealso{
-    \code{\link{readAndCombineLxbs}}
+    \code{\link{readManyLxbs}}
 }
 \examples{
 ## Read file 'name.lxb' from current directory into matrix x
