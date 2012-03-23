@@ -5,18 +5,21 @@
     Read a single LXB file into a matrix.
 }
 \usage{
-    readLxb(filename)
+    readLxb(filename, text=FALSE)
 }
 \arguments{
     \item{filename}{name of the file to load.}
+    \item{text}{include text segment in output if TRUE.}
 }
 \seealso{
     \code{\link{readManyLxbs}}
 }
 \examples{
 \dontrun{
-## Read file 'name.lxb' from current directory into matrix x
-x <- readLxb('name.lxb')
+## Read file 'name.lxb' from current directory into list x
+x <- readLxb('name.lxb', text=TRUE)
+dim(x$data)
+names(x$text)
 }
 }
 \keyword{file}

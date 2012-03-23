@@ -1,9 +1,9 @@
-readLxb <- function (filename) {
+readLxb <- function (filename, text=FALSE) {
     # Read one LXB file.  Returns a matrix in which each column corresponds to
     # a parameter.
-    x <- .Call("read_lxb", as.character(filename))
+    x <- .Call("read_lxb", as.character(filename), as.logical(text))
     if (!is.null(x))
-        x <- t(x)
+        x$data <- t(x$data)
     x
 }
 
@@ -18,7 +18,7 @@ readManyLxbs <- function(paths, filter=identity) {
     # The name of each LXB file is used to set the 'names' attribute of the
     # returned list.
     filenames  <- Sys.glob(paths)
-    res        <- lapply(filenames, function(x) filter(readLxb(x)))
+    res        <- lapply(filenames, function(x) filter(readLxb(x)$data))
     names(res) <- lapply(filenames, function(x) sub(".lxb", "", basename(x)))
     res
 }

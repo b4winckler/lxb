@@ -113,3 +113,25 @@ int map_get_int(map_t m, const char *key)
 {
     return atoi(map_get(m, key));
 }
+
+// Enable tail recursive call optimization with -foptimize-sibling-calls
+void map_fold(map_t m, fold_func_t f, void *seed)
+{
+    if (!m) return;
+
+    // NOTE: As a side-effect 'f' will update 'seed'.
+    f(m->name, m->value, seed);
+    map_fold(m->nxt, f, seed);
+}
+
+static void map_length_f(const char *key, const char *value, int *x)
+{
+    ++(*x);
+}
+
+int map_length(map_t m)
+{
+    int z = 0;
+    map_fold(m, (fold_func_t)map_length_f, (void*)&z);
+    return z;
+}

@@ -205,9 +205,51 @@ bool check_par_format(map_t txt)
     return true;
 }
 
-SEXP read_lxb(SEXP fn)
+struct set_value_s {
+    SEXP v;
+    int  n;
+};
+
+static void set_value_f(const char *key, const char *value,
+                        struct set_value_s *state)
 {
-    const char *filename = CHAR(STRING_ELT(fn, 0));
+    SET_STRING_ELT(state->v, (state->n)++, mkChar(value));
+}
+
+static void set_key_f(const char *key, const char *value,
+                      struct set_value_s *state)
+{
+    // Remove initial dollar sign from keys since R uses these to index lists.
+    if (key[0] == '$')
+        ++key;
+
+    SET_STRING_ELT(state->v, (state->n)++, mkChar(key));
+}
+
+SEXP map_to_Rlist(map_t map)
+{
+    int len = map_length(map);
+
+    SEXP vals;
+    PROTECT(vals = allocVector(STRSXP, len));
+    struct set_value_s seed = { vals, 0 };
+    map_fold(map, (fold_func_t)set_value_f, (void*)&seed);
+
+    SEXP names;
+    PROTECT(names = allocVector(STRSXP, len));
+    seed.v = names;
+    seed.n = 0;
+    map_fold(map, (fold_func_t)set_key_f, (void*)&seed);
+
+    namesgets(vals, names);
+
+    return vals;
+}
+
+SEXP read_lxb(SEXP inFilename, SEXP inTextFlag)
+{
+    const char *filename = CHAR(STRING_ELT(inFilename, 0));
+    int textFlag = *LOGICAL(inTextFlag);
 
     long size;
     char *buf = read_file(filename, &size);
@@ -249,8 +291,8 @@ SEXP read_lxb(SEXP fn)
     // Allocate output matrix to be ntot columns times npar rows
     int npar = map_get_int(txt, "$PAR");
     int ntot = map_get_int(txt, "$TOT");
-    SEXP out;
-    PROTECT(out = allocMatrix(INTSXP, npar, ntot));
+    SEXP mat;
+    PROTECT(mat = allocMatrix(INTSXP, npar, ntot));
 
     // Initialize vector with row names (taken from $PxN parameter)
     SEXP rownames;
@@ -264,15 +306,32 @@ SEXP read_lxb(SEXP fn)
     SEXP dimnames;
     PROTECT(dimnames = allocVector(VECSXP, 2));
     SET_VECTOR_ELT(dimnames, 0, rownames);
-    dimnamesgets(out, dimnames);
+    dimnamesgets(mat, dimnames);
 
     // Set actual data in output matrix
     const int32_t *src = (int32_t*)(buf + hdr.begin_data);
-    int *dst           = INTEGER(out);
+    int *dst           = INTEGER(mat);
     for (int i = 0; i < ntot*npar; ++i)
         *dst++ = (int)*src++ & parameter_mask(i%npar);
 
-    UNPROTECT(3);
+
+    SEXP out, outnames;
+    int outLen = textFlag ? 2 : 1;
+    PROTECT(out = allocVector(VECSXP, outLen));
+    PROTECT(outnames = allocVector(STRSXP, outLen));
+
+    SET_VECTOR_ELT(out, 0, mat);
+    SET_STRING_ELT(outnames, 0, mkChar("data"));
+
+    if (textFlag) {
+        SET_VECTOR_ELT(out, 1, map_to_Rlist(txt));
+        SET_STRING_ELT(outnames, 1, mkChar("text"));
+        UNPROTECT(2);
+    }
+
+    namesgets(out, outnames);
+
+    UNPROTECT(5);
     map_free(txt);
     free(buf);
 
