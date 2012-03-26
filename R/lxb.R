@@ -21,12 +21,9 @@ readLxb <- function(paths, filter=TRUE, text=FALSE) {
     go <- function(filename) {
         x <- .Call("read_lxb", as.character(filename), as.logical(text))
         if (!is.null(x)) {
-            if (!is.null(x$data)) {
-                x$data <- t(x$data)
-                if (filter)
-                    x$data <- x$data[x$data[ ,'RID'] != 0 &
-                                     x$data[ ,'DBL'] != 0, ]
-            }
+            if (!is.null(x$data) && filter && 'RID' %in% colnames(x$data)
+                    && 'DBL' %in% colnames(x$data))
+                x$data <- x$data[x$data[ ,'RID'] != 0 & x$data[ ,'DBL'] != 0, ]
 
             if (!text)
                 x <- x$data

@@ -18,8 +18,6 @@ typedef struct {
     int begin_analysis, end_analysis;
 } fcs_header;
 
-static int par_mask[MAX_PAR];
-
 
 char *read_file(const char *filename, long *size)
 {
@@ -65,24 +63,6 @@ const char *parameter_key(int n, char type)
 
     sprintf(buf, "$P%d%c", n+1, type);
     return buf;
-}
-
-void init_parameter_mask(map_t txt)
-{
-    memset(par_mask, 0, MAX_PAR*sizeof(par_mask[0]));
-
-    int npar = map_get_int(txt, "$PAR");
-    for (int i = 0; i < npar; ++i) {
-        const char *key = parameter_key(i, 'R');
-        par_mask[i] = map_get_int(txt, key);
-        if (par_mask[i] > 0)
-            --par_mask[i];
-    }
-}
-
-int parameter_mask(int n)
-{
-    return n >= 0 && n < MAX_PAR ? par_mask[n] : 0;
 }
 
 bool parse_header(const char *data, long size, fcs_header *hdr)
@@ -190,40 +170,17 @@ bool check_par_format(map_t txt)
                 " output may be corrupted\n");
     }
 
-    init_parameter_mask(txt);
-
     for (int i = 0; i < npar; ++i) {
         const char *key = parameter_key(i, 'B');
         int bits = map_get_int(txt, key);
-        if (bits != 32) {
-            warning("  Unsupported LXB: parameter %d is not 32 bits "
+        if (bits % 8 != 0 || bits < 8) {
+            warning("  Unsupported LXB: parameter %d is not a multiple of 8 "
                     "(%s=%d)\n", i, key, bits);
             return false;
         }
     }
 
     return true;
-}
-
-struct set_value_s {
-    SEXP v;
-    int  n;
-};
-
-static void set_value_f(const char *key, const char *value,
-                        struct set_value_s *state)
-{
-    SET_STRING_ELT(state->v, (state->n)++, mkChar(value));
-}
-
-static void set_key_f(const char *key, const char *value,
-                      struct set_value_s *state)
-{
-    // Remove initial dollar sign from keys since R uses these to index lists.
-    if (key[0] == '$')
-        ++key;
-
-    SET_STRING_ELT(state->v, (state->n)++, mkChar(key));
 }
 
 void parse_segments(char *buf, long size, map_t *outTxt, char **outData)
@@ -258,6 +215,52 @@ void parse_segments(char *buf, long size, map_t *outTxt, char **outData)
     }
 
     if (outData) *outData = buf + hdr.begin_data;
+}
+
+void copy_data(int *dest, char *src, map_t txt)
+{
+    int par_mask[MAX_PAR];
+    int par_size[MAX_PAR];
+
+    int npar = map_get_int(txt, "$PAR");
+    int ntot = map_get_int(txt, "$TOT");
+
+    for (int i = 0; i < npar; ++i) {
+        int bits    = map_get_int(txt, parameter_key(i, 'B'));
+        par_mask[i] = map_get_int(txt, parameter_key(i, 'R')) - 1 & bits - 1;
+        par_size[i] = bits >> 3;
+    }
+
+    // NOTE: R stores matrices in column-major order but the data in the LXB
+    // file is in row-major order so copy the data transposed.
+    char *p = src;
+    for (int j = 0; j < ntot; ++j) {
+        for (int i = 0; i < npar; ++i) {
+            dest[i*ntot + j] = *p & par_mask[i];
+            p += par_size[i];
+        }
+    }
+}
+
+struct set_value_s {
+    SEXP v;
+    int  n;
+};
+
+static void set_value_f(const char *key, const char *value,
+                        struct set_value_s *state)
+{
+    SET_STRING_ELT(state->v, (state->n)++, mkChar(value));
+}
+
+static void set_key_f(const char *key, const char *value,
+                      struct set_value_s *state)
+{
+    // Remove initial dollar sign from keys since R uses these to index lists.
+    if (key[0] == '$')
+        ++key;
+
+    SET_STRING_ELT(state->v, (state->n)++, mkChar(key));
 }
 
 SEXP map_to_Rlist(map_t map)
@@ -310,27 +313,24 @@ SEXP read_lxb(SEXP inFilename, SEXP inTextFlag)
         int npar = map_get_int(txt, "$PAR");
         int ntot = map_get_int(txt, "$TOT");
         SEXP mat;
-        PROTECT(mat = allocMatrix(INTSXP, npar, ntot));
+        PROTECT(mat = allocMatrix(INTSXP, ntot, npar));
 
-        // Initialize vector with row names (taken from $PxN parameter)
-        SEXP rownames;
-        PROTECT(rownames = allocVector(STRSXP, npar));
+        // Initialize vector with column names (taken from $PxN parameter)
+        SEXP colnames;
+        PROTECT(colnames = allocVector(STRSXP, npar));
         for (int i = 0; i < npar; ++i) {
             const char *label = map_get(txt, parameter_key(i, 'N'));
-            SET_STRING_ELT(rownames, i, mkChar(label));
+            SET_STRING_ELT(colnames, i, mkChar(label));
         }
 
         // Set dimnames attribute on output matrix
         SEXP dimnames;
         PROTECT(dimnames = allocVector(VECSXP, 2));
-        SET_VECTOR_ELT(dimnames, 0, rownames);
+        SET_VECTOR_ELT(dimnames, 0, R_NilValue);
+        SET_VECTOR_ELT(dimnames, 1, colnames);
         dimnamesgets(mat, dimnames);
 
-        // Set actual data in output matrix
-        const int32_t *src = (int32_t*)data;
-        int *dst           = INTEGER(mat);
-        for (int i = 0; i < ntot*npar; ++i)
-            *dst++ = (int)*src++ & parameter_mask(i%npar);
+        copy_data(INTEGER(mat), data, txt);
 
         SET_VECTOR_ELT(out, 0, mat);
         UNPROTECT(3);

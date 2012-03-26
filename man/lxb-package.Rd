@@ -21,7 +21,6 @@ Here are some assumptions made:
   \item The data must be integral, in list mode, and in little endian byte
         order (\code{$DATATYPE = I}, \code{$MODE = L},
         \code{$BYTEORD = 1,2,3,4})
-  \item All parameters must be 32 bit (\code{$PnB = 32})
   \item At most 99 parameters are supported
   \item Unicode in the text segment is not supported
   \item Keys or values containing the separator character are not supported
