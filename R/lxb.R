@@ -26,9 +26,24 @@ readLxb <- function (paths, filter=identity, text=FALSE) {
         x
     }
 
-    names       <- Sys.glob(paths)
-    lxbs        <- lapply(names, go)
-    names(lxbs) <- lapply(names, function(x) sub(".lxb", "", basename(x)))
+    names <- Sys.glob(paths)
+    lxbs  <- lapply(names, go)
+
+    m <- regexec(".*([a-zA-Z])([0-9]+)[.]lxb", names)
+    if (all(lapply(m, '[', 1L) != -1)) {
+        # All names contain row & column information, extract into data frame
+        parts <- do.call(rbind, lapply(regmatches(names, m), '[', c(2L,3L)))
+        df <- data.frame(row=parts[ ,1], column=as.integer(parts[ ,2]))
+
+        # Order LXBs by: A1, B1, ..., A2, B2, ...
+        idx <- with(df, order(column, row))
+
+        names(lxbs) <- with(df, paste(row, column, sep=""))
+        lxbs <- lxbs[idx]
+    } else {
+        # No row & column information found, use filename
+        names(lxbs) <- lapply(names, function(x) sub(".lxb", "", basename(x)))
+    }
 
     if (length(lxbs) == 1)
         lxbs <- lxbs[[1]]
