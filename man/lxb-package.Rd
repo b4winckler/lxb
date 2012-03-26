@@ -37,20 +37,25 @@ Here are some assumptions made:
 ## all LXB files for the first plate here is how to read all parameter
 ## data for plate 1 into a list of matrices (each list item is one well,
 ## each column in a matrix corresponds to one parameter):
-y <- readLxb('plate1/*.lxb', filter=dropBadReads)
-
-## The argument 'filter=dropBadReads' ensures that bad reads are
-## ignored.
+y <- readLxb('plate1/*.lxb')
 
 ## It is now possible inspect individual wells, e.g. the dimensions of
-## the first well are given by
+## the first well are given by:
 dim(y[[1]])
 
-## .. and the names of the parameters for well 1 are given by
+## .. and the names of the parameters for well 1 are given by:
 colnames(y[[1]])
 
-## You can also inspect which LXB file each item corresponds to by
-## typing
+## If the LXB files have names like "XXXX_B1.lxb" where 'B1' means that
+## the LXB file correspond to the first well on the second row, then it
+## is also possible to index 'y' by the well name, e.g.:
+dim(y$B1)
+
+## .. which is the same as:
+dim(y[[2]])
+
+## You can see all well names (and the order of the wells in 'y') by
+## typing:
 names(y)
 }
 }

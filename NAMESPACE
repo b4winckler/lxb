@@ -1,2 +1,2 @@
 useDynLib(lxb, read_lxb)
-export(readLxb, dropBadReads)
+export(readLxb)
