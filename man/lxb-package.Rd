@@ -37,7 +37,7 @@ Here are some assumptions made:
 ## all LXB files for the first plate here is how to read all parameter
 ## data for plate 1 into a list of matrices (each list item is one well,
 ## each column in a matrix corresponds to one parameter):
-y <- readManyLxbs('plate1/*.lxb', filter=dropBadReads)
+y <- readLxb('plate1/*.lxb', filter=dropBadReads)
 
 ## The argument 'filter=dropBadReads' ensures that bad reads are
 ## ignored.
