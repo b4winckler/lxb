@@ -33,7 +33,7 @@ Here are some assumptions made:
 ## Typically your LXB files should be organized with one folder per
 ## plate, with each plate consisting of multiple wells and each well
 ## corresponding to one LXB file.  Assuming the folder 'plate1' contains
-## all LXB files for the first plate here is how to read all parameter
+## all LXB files for the first plate, here is how to read all parameter
 ## data for plate 1 into a list of matrices (each list item is one well,
 ## each column in a matrix corresponds to one parameter):
 y <- readLxb('plate1/*.lxb')
@@ -45,9 +45,9 @@ dim(y[[1]])
 ## .. and the names of the parameters for well 1 are given by:
 colnames(y[[1]])
 
-## If the LXB files have names like "XXXX_B1.lxb" where 'B1' means that
-## the LXB file correspond to the first well on the second row, then it
-## is also possible to index 'y' by the well name, e.g.:
+## If the LXB files have names like "XXXX_B1.lxb" (where 'B1' indicates
+## that the LXB file corresponds to the first well on the second row),
+## then it is also possible to index 'y' by the well name, e.g.:
 dim(y$B1)
 
 ## .. which is the same as:
