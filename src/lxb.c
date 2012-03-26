@@ -226,6 +226,40 @@ static void set_key_f(const char *key, const char *value,
     SET_STRING_ELT(state->v, (state->n)++, mkChar(key));
 }
 
+void parse_segments(char *buf, long size, map_t *outTxt, char **outData)
+{
+    if (outTxt)  *outTxt = NULL;
+    if (outData) *outData = NULL;
+
+    fcs_header hdr;
+    bool ok = parse_header(buf, size, &hdr);
+    if (!ok) {
+        warning("  Bad LXB: failed to parse header\n");
+        return;
+    }
+
+    long txt_size = hdr.end_text - hdr.begin_text;
+    if (!(txt_size > 0 && hdr.begin_text > 0 && hdr.end_text <= size)) {
+        free(buf);
+        warning("  Bad LXB: could not locate TEXT segment\n");
+        return;
+    }
+
+    map_t txt = parse_text(buf + hdr.begin_text, txt_size);
+    if (outTxt) *outTxt = txt;
+
+    if (!check_par_format(txt))
+        return;
+
+    long data_size = hdr.end_data - hdr.begin_data;
+    if (!(data_size > 0 && hdr.begin_data > 0 && hdr.end_data <= size)) {
+        warning("  Bad LXB: could not locate DATA segment\n");
+        return;
+    }
+
+    if (outData) *outData = buf + hdr.begin_data;
+}
+
 SEXP map_to_Rlist(map_t map)
 {
     int len = map_length(map);
@@ -258,69 +292,52 @@ SEXP read_lxb(SEXP inFilename, SEXP inTextFlag)
         return R_NilValue;
     }
 
-    fcs_header hdr;
-    bool ok = parse_header(buf, size, &hdr);
-    if (!ok) {
+    map_t txt;      // alloc'ed by parse_segments(), must free()
+    char *data;     // will point inside 'buf', do not free()
+    parse_segments(buf, size, &txt, &data);
+    if (!txt) {
         free(buf);
         return R_NilValue;
     }
-
-    long txt_size = hdr.end_text - hdr.begin_text;
-    if (!(txt_size > 0 && hdr.begin_text > 0 && hdr.end_text <= size)) {
-        free(buf);
-        warning("  Bad LXB: could not locate TEXT segment\n");
-        return R_NilValue;
-    }
-
-    map_t txt = parse_text(buf + hdr.begin_text, txt_size);
-
-    if (!check_par_format(txt)) {
-        map_free(txt);
-        free(buf);
-        return R_NilValue;
-    }
-
-    long data_size = hdr.end_data - hdr.begin_data;
-    if (!(data_size > 0 && hdr.begin_data > 0 && hdr.end_data <= size)) {
-        map_free(txt);
-        free(buf);
-        warning("  Bad LXB: could not locate DATA segment\n");
-        return R_NilValue;
-    }
-
-    // Allocate output matrix to be ntot columns times npar rows
-    int npar = map_get_int(txt, "$PAR");
-    int ntot = map_get_int(txt, "$TOT");
-    SEXP mat;
-    PROTECT(mat = allocMatrix(INTSXP, npar, ntot));
-
-    // Initialize vector with row names (taken from $PxN parameter)
-    SEXP rownames;
-    PROTECT(rownames = allocVector(STRSXP, npar));
-    for (int i = 0; i < npar; ++i) {
-        const char *label = map_get(txt, parameter_key(i, 'N'));
-        SET_STRING_ELT(rownames, i, mkChar(label));
-    }
-
-    // Set dimnames attribute on output matrix
-    SEXP dimnames;
-    PROTECT(dimnames = allocVector(VECSXP, 2));
-    SET_VECTOR_ELT(dimnames, 0, rownames);
-    dimnamesgets(mat, dimnames);
-
-    // Set actual data in output matrix
-    const int32_t *src = (int32_t*)(buf + hdr.begin_data);
-    int *dst           = INTEGER(mat);
-    for (int i = 0; i < ntot*npar; ++i)
-        *dst++ = (int)*src++ & parameter_mask(i%npar);
-
 
     SEXP out, outnames;
     int outLen = textFlag ? 2 : 1;
     PROTECT(out = allocVector(VECSXP, outLen));
     PROTECT(outnames = allocVector(STRSXP, outLen));
 
-    SET_VECTOR_ELT(out, 0, mat);
+    if (data) {
+        // Allocate output matrix to be ntot columns times npar rows
+        int npar = map_get_int(txt, "$PAR");
+        int ntot = map_get_int(txt, "$TOT");
+        SEXP mat;
+        PROTECT(mat = allocMatrix(INTSXP, npar, ntot));
+
+        // Initialize vector with row names (taken from $PxN parameter)
+        SEXP rownames;
+        PROTECT(rownames = allocVector(STRSXP, npar));
+        for (int i = 0; i < npar; ++i) {
+            const char *label = map_get(txt, parameter_key(i, 'N'));
+            SET_STRING_ELT(rownames, i, mkChar(label));
+        }
+
+        // Set dimnames attribute on output matrix
+        SEXP dimnames;
+        PROTECT(dimnames = allocVector(VECSXP, 2));
+        SET_VECTOR_ELT(dimnames, 0, rownames);
+        dimnamesgets(mat, dimnames);
+
+        // Set actual data in output matrix
+        const int32_t *src = (int32_t*)data;
+        int *dst           = INTEGER(mat);
+        for (int i = 0; i < ntot*npar; ++i)
+            *dst++ = (int)*src++ & parameter_mask(i%npar);
+
+        SET_VECTOR_ELT(out, 0, mat);
+        UNPROTECT(3);
+    } else {
+        SET_VECTOR_ELT(out, 0, R_NilValue);
+    }
+
     SET_STRING_ELT(outnames, 0, mkChar("data"));
 
     if (textFlag) {
@@ -331,8 +348,9 @@ SEXP read_lxb(SEXP inFilename, SEXP inTextFlag)
 
     namesgets(out, outnames);
 
-    UNPROTECT(5);
-    map_free(txt);
+    UNPROTECT(2);
+    if (txt)
+        map_free(txt);
     free(buf);
 
     return out;
