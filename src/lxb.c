@@ -226,8 +226,12 @@ void copy_data(int *dest, char *src, map_t txt)
     int ntot = map_get_int(txt, "$TOT");
 
     for (int i = 0; i < npar; ++i) {
-        int bits    = map_get_int(txt, parameter_key(i, 'B'));
-        par_mask[i] = map_get_int(txt, parameter_key(i, 'R')) - 1 & bits - 1;
+        int bits  = map_get_int(txt, parameter_key(i, 'B'));
+        int range = map_get_int(txt, parameter_key(i, 'R'));
+
+        // NOTE: MagPIX LXBs may have negative PnR parameters.  Not sure how to
+        // interpret this so just ignore such entries.
+        par_mask[i] = range <= 0 ? bits-1 : range-1 & bits-1;
         par_size[i] = bits >> 3;
     }
 
@@ -295,7 +299,7 @@ SEXP read_lxb(SEXP inFilename, SEXP inTextFlag)
         return R_NilValue;
     }
 
-    map_t txt;      // alloc'ed by parse_segments(), must free()
+    map_t txt;      // alloc'ed by parse_segments(), must map_free()
     char *data;     // will point inside 'buf', do not free()
     parse_segments(buf, size, &txt, &data);
     if (!txt) {
@@ -309,7 +313,7 @@ SEXP read_lxb(SEXP inFilename, SEXP inTextFlag)
     PROTECT(outnames = allocVector(STRSXP, outLen));
 
     if (data) {
-        // Allocate output matrix to be ntot columns times npar rows
+        // Allocate output matrix to be ntot rows times npar columns
         int npar = map_get_int(txt, "$PAR");
         int ntot = map_get_int(txt, "$TOT");
         SEXP mat;
