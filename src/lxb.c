@@ -226,12 +226,15 @@ void copy_data(int *dest, char *src, map_t txt)
     int ntot = map_get_int(txt, "$TOT");
 
     for (int i = 0; i < npar; ++i) {
-        int bits  = map_get_int(txt, parameter_key(i, 'B'));
-        int range = map_get_int(txt, parameter_key(i, 'R'));
+        int bits      = map_get_int(txt, parameter_key(i, 'B'));
+        int range     = map_get_int(txt, parameter_key(i, 'R'));
+        unsigned mask = ((unsigned)-1) >> (8*sizeof(unsigned)-bits);
 
         // NOTE: MagPIX LXBs may have negative PnR parameters.  Not sure how to
         // interpret this so just ignore such entries.
-        par_mask[i] = range <= 0 ? bits-1 : range-1 & bits-1;
+        par_mask[i] = mask;
+        if (range > 0)
+            par_mask[i] &= range-1;
         par_size[i] = bits >> 3;
     }
 
@@ -240,7 +243,9 @@ void copy_data(int *dest, char *src, map_t txt)
     char *p = src;
     for (int j = 0; j < ntot; ++j) {
         for (int i = 0; i < npar; ++i) {
-            dest[i*ntot + j] = *p & par_mask[i];
+            // NOTE: Here it is assumed that both the machine and the LXB is
+            // little-endian!
+            dest[i*ntot + j] = *(int*)p & par_mask[i];
             p += par_size[i];
         }
     }
