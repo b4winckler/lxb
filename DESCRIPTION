@@ -1,6 +1,6 @@
 Package: lxb
-Version: 1.0
-Date: 2012-03-28
+Version: 1.1
+Date: 2012-04-05
 Title: Fast LXB file reader
 Author: Björn Winckler <bjorn.winckler@gmail.com>
 Maintainer: Björn Winckler <bjorn.winckler@gmail.com>
