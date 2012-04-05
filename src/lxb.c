@@ -2,10 +2,8 @@
 #include <Rinternals.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 #include "map_lib.h"
-
-// strsep() does not exist on Windows, so include the version from libgw32c
-#include "strsep.h"
 
 // Max number of parameters in LXB file that we handle
 #define MAX_PAR       99
@@ -111,20 +109,19 @@ map_t parse_text(const char *text, long size)
     map_t m = map_create();
     char *sep = dup2str(text, 1);
     char *data = dup2str(text+1, size-1);
-
-    char *p = data;
-    for (;;) {
+    char *key = strtok(data, sep);
+    while (key) {
         // FIXME: FCS 3.0 allows the separator character to appear in keys and
         // values by repeating the separator twice -- this is currently NOT
         // handled.
         // For example, if sep='/' then "k//ey/value/" should be parsed as
         // "k/ey"="value", whereas we parse it as { "k"="", "ey"="value" }.
-        char *key = strsep(&p, sep);
-        if (!key) break;
-        char *val = strsep(&p, sep);
+        char *val = strtok(NULL, sep);
         if (!val) break;
 
         map_set(m, key, val);
+
+        key = strtok(NULL, sep);
     }
 
     free(data);
