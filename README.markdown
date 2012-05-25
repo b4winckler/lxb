@@ -26,8 +26,8 @@ Here are some assumptions made:
 
 -   The LXB file must be smaller than 100 Mb (`$BEGINDATA` and
     `$ENDDATA` are ignored)
--   item The data must be integral, in list mode, and in little endian byte
-    order (`$DATATYPE = I`, `$MODE = L`, `$BYTEORD = 1,2,3,4`)
+-   The data must be integral, in list mode, and in little endian byte order
+    (`$DATATYPE = I`, `$MODE = L`, `$BYTEORD = 1,2,3,4`)
 -   At most 99 parameters are supported
 -   Unicode in the text segment is not supported
 -   Keys or values containing the separator character are not supported
