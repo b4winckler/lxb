@@ -187,10 +187,8 @@ void parse_segments(char *buf, long size, map_t *outTxt, char **outData)
 
     fcs_header hdr;
     bool ok = parse_header(buf, size, &hdr);
-    if (!ok) {
-        warning("  Bad LXB: failed to parse header\n");
+    if (!ok)
         return;
-    }
 
     long txt_size = hdr.end_text - hdr.begin_text;
     if (!(txt_size > 0 && hdr.begin_text > 0 && hdr.end_text <= size)) {
@@ -305,6 +303,7 @@ SEXP read_lxb(SEXP inFilename, SEXP inTextFlag)
     char *data;     // will point inside 'buf', do not free()
     parse_segments(buf, size, &txt, &data);
     if (!txt) {
+        warning("  Could not parse file: %s\n", filename);
         free(buf);
         return R_NilValue;
     }
