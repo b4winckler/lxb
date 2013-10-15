@@ -63,17 +63,19 @@ const char *parameter_key(int n, char type)
     return buf;
 }
 
-bool parse_header(const char *data, long size, fcs_header *hdr)
+bool parse_header(const char *data, long size, fcs_header *hdr,
+        const char *filename)
 {
     if (!hdr) return false;
 
     if (size < 58) {
-        warning("  Bad LXB: header data is too small (%lu)\n", size);
+        warning("  Bad LXB: header data is too small (%lu) in '%s'\n", size,
+                filename);
         return false;
     }
 
     if (0 != strncmp(data, "FCS3.0    ", 10)) {
-        warning("  Bad LXB: magic bytes do not match\n");
+        warning("  Bad LXB: magic bytes do not match in '%s'\n", filename);
         return false;
     }
 
@@ -101,10 +103,13 @@ char *dup2str(const void *buf, long size)
     return memcpy(str, buf, size);
 }
 
-map_t parse_text(const char *text, long size)
+map_t parse_text(const char *text, long size, const char *filename)
 {
-    if (size < 2)
+    if (size < 2) {
+        warning("  Bad LXB: text segment too small (%lu) in '%s'\n", size,
+                filename);
         return NULL;
+    }
 
     map_t m = map_create();
     char *sep = dup2str(text, 1);
@@ -130,32 +135,33 @@ map_t parse_text(const char *text, long size)
     return m;
 }
 
-bool check_par_format(map_t txt)
+bool check_par_format(map_t txt, const char *filename)
 {
     int npar = map_get_int(txt, "$PAR");
     if (npar > MAX_PAR) {
-        warning("  Unsupported LXB: too many parameters (%d)\n", npar);
+        warning("  Unsupported LXB: too many parameters (%d) in '%s'\n", npar,
+                filename);
         return false;
     }
 
     const char *data_type = map_get(txt, "$DATATYPE");
     if (strcasecmp("I", data_type) != 0) {
         warning("  Unsupported LXB: data is not integral "
-                "($DATATYPE=%s)\n", data_type);
+                "($DATATYPE=%s) in '%s'\n", data_type, filename);
         return false;
     }
 
     const char *mode = map_get(txt, "$MODE");
     if (strcasecmp("L", mode) != 0) {
         warning("  Unsupported LXB: data not in list format "
-                "($MODE=%s)\n", mode);
+                "($MODE=%s) in '%s'\n", mode, filename);
         return false;
     }
 
     const char *byteord = map_get(txt, "$BYTEORD");
     if (strcmp("1,2,3,4", byteord) != 0) {
         warning("  Unsupported LXB: data not in little endian format "
-                "($BYTEORD=%s)\n", byteord);
+                "($BYTEORD=%s) in '%s'\n", byteord, filename);
         return false;
     }
 
@@ -164,7 +170,7 @@ bool check_par_format(map_t txt)
         // FIXME: Support Unicode.  We try to parse the data even if the text
         // segment contains Unicode characters, so don't return false here.
         warning("  Unsupported LXB: Unicode flag detected,"
-                " output may be corrupted\n");
+                " output may be corrupted in '%s'\n", filename);
     }
 
     for (int i = 0; i < npar; ++i) {
@@ -172,7 +178,7 @@ bool check_par_format(map_t txt)
         int bits = map_get_int(txt, key);
         if (bits % 8 != 0 || bits < 8) {
             warning("  Unsupported LXB: parameter %d is not a multiple of 8 "
-                    "(%s=%d)\n", i, key, bits);
+                    "(%s=%d) in '%s'\n", i, key, bits, filename);
             return false;
         }
     }
@@ -180,36 +186,48 @@ bool check_par_format(map_t txt)
     return true;
 }
 
-void parse_segments(char *buf, long size, map_t *outTxt, char **outData)
+// Return text segment in alloc'ed memory (must map_free()) and pointer to data
+// segment inside 'buf' (do *not* free()).
+// FIXME: this is potentially very confusing.
+void parse_segments(char *buf, long size, map_t *outTxt, char **outData,
+        const char *filename)
 {
     if (outTxt)  *outTxt = NULL;
     if (outData) *outData = NULL;
 
     fcs_header hdr;
-    bool ok = parse_header(buf, size, &hdr);
+    bool ok = parse_header(buf, size, &hdr, filename);
     if (!ok)
         return;
 
     long txt_size = hdr.end_text - hdr.begin_text;
     if (!(txt_size > 0 && hdr.begin_text > 0 && hdr.end_text <= size)) {
-        free(buf);
-        warning("  Bad LXB: could not locate TEXT segment\n");
+        warning("  Bad LXB: could not locate TEXT segment in '%s'\n",
+                filename);
         return;
     }
 
-    map_t txt = parse_text(buf + hdr.begin_text, txt_size);
-    if (outTxt) *outTxt = txt;
-
-    if (!check_par_format(txt))
+    map_t txt = parse_text(buf + hdr.begin_text, txt_size, filename);
+    if (!(txt && check_par_format(txt, filename))) {
+        map_free(txt);
         return;
+    }
+    if (outTxt) {
+        *outTxt = txt;
+    } else {
+        // Caller cannot map_free(txt) so do it here or memory will leak.
+        map_free(txt);
+    }
 
     long data_size = hdr.end_data - hdr.begin_data;
     if (!(data_size > 0 && hdr.begin_data > 0 && hdr.end_data <= size)) {
-        warning("  Bad LXB: could not locate DATA segment\n");
+        warning("  Bad LXB: could not locate DATA segment in '%s'\n",
+                filename);
         return;
     }
-
     if (outData) *outData = buf + hdr.begin_data;
+
+    return;
 }
 
 void copy_data(int *dest, char *src, map_t txt)
@@ -301,9 +319,11 @@ SEXP read_lxb(SEXP inFilename, SEXP inTextFlag)
 
     map_t txt;      // alloc'ed by parse_segments(), must map_free()
     char *data;     // will point inside 'buf', do not free()
-    parse_segments(buf, size, &txt, &data);
+    parse_segments(buf, size, &txt, &data, filename);
     if (!txt) {
-        warning("  Could not parse file: %s\n", filename);
+        // Failed to read text segment, so we can only bail and return Nil.
+        // Note however that whenever text segment was parsed we continue on
+        // and return the text segment if requested.
         free(buf);
         return R_NilValue;
     }
