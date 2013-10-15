@@ -23,7 +23,9 @@
     of all parameters in the LXB file where each column corresponds to one
     parameter.
 
-    If \code{text=FALSE} then each item only consists of the data matrix.
+    If \code{text=FALSE} then each item only consists of the data matrix.  Set
+    \code{text=TRUE} to return the text segment of the LXB file as well.  This
+    can be useful for debugging purposes.
 
     If only one LXB file was read then the first item of the list is returned
     instead of a list with only one item.
