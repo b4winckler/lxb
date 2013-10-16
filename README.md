@@ -61,3 +61,8 @@ Here are some assumptions made:
     ## You can see all well names (and the order of the wells in 'y') by
     ## typing:
     names(y)
+
+
+## License
+
+Copyright (c) 2012, Björn Winckler.  Released under the BSD 2-Clause license.

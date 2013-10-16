@@ -6,5 +6,5 @@ Author: Björn Winckler <bjorn.winckler@gmail.com>
 Maintainer: Björn Winckler <bjorn.winckler@gmail.com>
 Depends: R (>= 2.8.0)
 Description: Functions to quickly read LXB parameter data.
-License: BSD
+License: BSD_2_clause + file LICENSE
 Encoding: UTF-8
