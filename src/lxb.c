@@ -19,7 +19,7 @@ typedef struct {
 
 char *read_file(const char *filename, long *size)
 {
-    FILE *fp = fopen(filename, "r");
+    FILE *fp = fopen(filename, "rb");
     if (!fp)
         return NULL;
 
