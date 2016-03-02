@@ -65,4 +65,5 @@ Here are some assumptions made:
 
 ## License
 
-Copyright (c) 2012, Björn Winckler.  Released under the BSD 2-Clause license.
+Copyright (c) 2016, Björn Winckler.  Uses map_lib which is (c) James K.
+Lawless.  Released under the MIT license.
