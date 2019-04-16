@@ -1,6 +1,6 @@
 Package: lxb
-Version: 1.5
-Date: 2016-03-01
+Version: 1.6
+Date: 2019-04-16
 Title: Fast LXB File Reader
 Authors@R: c(person("Björn", "Winckler", role = c("aut", "cre"),
 	email = "bjorn.winckler@gmail.com"),
