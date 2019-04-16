@@ -285,26 +285,6 @@ static void set_key_f(const char *key, const char *value,
     SET_STRING_ELT(state->v, (state->n)++, mkChar(key));
 }
 
-SEXP map_to_Rlist(map_t map)
-{
-    int len = map_length(map);
-
-    SEXP vals;
-    PROTECT(vals = allocVector(STRSXP, len));
-    struct set_value_s seed = { vals, 0 };
-    map_fold(map, (fold_func_t)set_value_f, (void*)&seed);
-
-    SEXP names;
-    PROTECT(names = allocVector(STRSXP, len));
-    seed.v = names;
-    seed.n = 0;
-    map_fold(map, (fold_func_t)set_key_f, (void*)&seed);
-
-    namesgets(vals, names);
-
-    return vals;
-}
-
 SEXP read_lxb(SEXP inFilename, SEXP inTextFlag)
 {
     const char *filename = CHAR(STRING_ELT(inFilename, 0));
@@ -366,8 +346,25 @@ SEXP read_lxb(SEXP inFilename, SEXP inTextFlag)
     SET_STRING_ELT(outnames, 0, mkChar("data"));
 
     if (textFlag) {
-        SET_VECTOR_ELT(out, 1, map_to_Rlist(txt));
+        // Convert 'txt' which is of type map_t to an R 'list'
+        int len = map_length(txt);
+
+        SEXP vals;
+        PROTECT(vals = allocVector(STRSXP, len));
+        struct set_value_s seed = { vals, 0 };
+        map_fold(txt, (fold_func_t)set_value_f, (void*)&seed);
+
+        SEXP names;
+        PROTECT(names = allocVector(STRSXP, len));
+        seed.v = names;
+        seed.n = 0;
+        map_fold(txt, (fold_func_t)set_key_f, (void*)&seed);
+
+        namesgets(vals, names);
+
+        SET_VECTOR_ELT(out, 1, vals);
         SET_STRING_ELT(outnames, 1, mkChar("text"));
+
         UNPROTECT(2);
     }
 
